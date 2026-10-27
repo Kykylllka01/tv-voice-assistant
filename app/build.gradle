@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.tvvoice.assistant'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.tvvoice.assistant'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '0.1'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Sideloaded over ADB: signed with the debug key. Sign real releases with your own key.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+    testImplementation 'junit:junit:4.13.2'
+    // Android ships org.json; plain JVM tests need the real one.
+    testImplementation 'org.json:json:20240303'
+}

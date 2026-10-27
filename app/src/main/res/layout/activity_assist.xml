@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The overlay, as designed on the canvas (1 dp = 2 design px on a 1080p TV): a scrim, then a chat-style panel.
+     The question is a bubble on the right; below it the orb and, beside it, the status, the web search pill and
+     the answer; under a hairline, the remote keys that work right now. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/scrim" />
+
+    <LinearLayout
+        android:id="@+id/card"
+        android:layout_width="560dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="32dp"
+        android:orientation="vertical"
+        android:background="@drawable/card"
+        android:elevation="20dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:paddingStart="19dp"
+        android:paddingEnd="19dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="11dp">
+
+        <TextView
+            android:id="@+id/question"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginStart="60dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bubble"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="7dp"
+            android:paddingBottom="7.5dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:textColor="#FFF8FAFF"
+            android:textSize="14sp"
+            android:lineSpacingExtra="3sp"
+            android:visibility="gone" />
+
+        <!-- The orb's rings and glow reach past its own square: nothing here clips them. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:orientation="horizontal">
+
+            <com.tvvoice.assistant.ui.MicOrbView
+                android:id="@+id/orb"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="-4dp"
+                android:layout_marginTop="-4dp" />
+
+            <LinearLayout
+                android:id="@+id/body"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="7dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="24dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.tvvoice.assistant.ui.WaveView
+                        android:id="@+id/wave"
+                        android:layout_width="22.5dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="7dp" />
+
+                    <com.tvvoice.assistant.ui.ShimmerTextView
+                        android:id="@+id/statusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFA3A3AD"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/pill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="23dp"
+                    android:layout_marginTop="1dp"
+                    android:background="@drawable/pill"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="7dp"
+                    android:paddingEnd="10dp"
+                    android:visibility="gone">
+
+                    <com.tvvoice.assistant.ui.SpinnerView
+                        android:id="@+id/spinner"
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:layout_marginStart="1dp"
+                        android:layout_marginEnd="6dp" />
+
+                    <LinearLayout
+                        android:id="@+id/favs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="horizontal" />
+
+                    <TextView
+                        android:id="@+id/pillText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFD5D5DC"
+                        android:textSize="10.5sp" />
+
+                    <TextView
+                        android:id="@+id/pillQuery"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:maxWidth="260dp"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="#FF9A9AA3"
+                        android:textSize="10.5sp" />
+                </LinearLayout>
+
+                <com.tvvoice.assistant.ui.MaxHeightScrollView
+                    android:id="@+id/answerScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:tag="max:136"
+                    android:scrollbars="none"
+                    android:fadingEdgeLength="16dp"
+                    android:requiresFadingEdge="vertical">
+
+                    <TextView
+                        android:id="@+id/answer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFF8FAFF"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="6sp" />
+                </com.tvvoice.assistant.ui.MaxHeightScrollView>
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginTop="12dp"
+            android:background="#12FFFFFF" />
+
+        <LinearLayout
+            android:id="@+id/hints"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+    </LinearLayout>
+</FrameLayout>

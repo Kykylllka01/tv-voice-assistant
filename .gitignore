@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+
+# Personal setup of one TV (device backups, package lists, photos): not part of the app
+tv-setup/
+# Outdated screenshot, superseded by docs/portfolio
+docs/settings.png

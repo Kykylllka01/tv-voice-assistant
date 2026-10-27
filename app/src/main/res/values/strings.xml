@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV Voice Assistant</string>
+    <string name="system_prompt">You are a voice assistant on a TV. Answer in the language of the question, briefly: two to four sentences that sound natural when read aloud. No markdown, lists, tables or emoji unless asked.\n\nYou can only answer questions, in text and voice. You cannot control the TV: you do not change the volume, channels or inputs, open apps, play videos or music, set timers, alarms or reminders, or see what is on screen. If asked for that, say honestly in one sentence that you cannot, and if you know how, tell how to do it with the remote. Never pretend you have done something.\n\nDo not make up facts, numbers, dates or names. If you do not know or are not sure, say so.</string>
+    <string name="prompt_today">It is now %1$s, %2$s.</string>
+    <string name="prompt_search_on">You have a web_search tool. Use it for anything current or checkable: news, rates and prices, sports results, schedules, events after your knowledge cutoff. For recent events set topic to news and a time_range, so old pages do not crowd out fresh ones. Answer from what it finds in your own words. After a statement taken from a source, put its number in square brackets, like [1], and no links. If the results do not answer it, say so. For weather use the weather tool, not the search. Look at the publication dates: if every result is older than what the question is about, search once more with other words, topic news and a shorter time_range, before saying you found nothing fresh.</string>
+    <string name="prompt_search_off">You have no web search, only the weather tool. If the question is about recent events, rates or prices, say honestly that you cannot check it, and that search can be turned on in the assistant settings.</string>
+    <string name="prompt_memory">You have a memory on this TV. When the user tells you something lasting about themselves (name, city, family, favourite sources, teams, shows, how they like answers), save it with the remember tool and mention briefly that you will remember. When they ask to forget something or it changes, use forget (and remember the new version). Do not save one-off requests. If a question depends on place and the user did not name one, use their saved city; if they have a favourite source for it, look there first. Only the tool saves or deletes: saying you remembered or forgot without calling remember or forget in this very turn is a lie, because nothing changes. Call the tool every time you are asked, even if the dialogue suggests it was done before; the list below is the only truth about what is saved.</string>
+    <string name="prompt_facts">What you know about the user:\n%1$s</string>
+
+    <string name="listening">Listening</string>
+    <string name="thinking">Thinking</string>
+    <string name="searching">Searching the web</string>
+    <plurals name="search_found">
+        <item quantity="one">%d source found</item>
+        <item quantity="other">%d sources found</item>
+    </plurals>
+    <string name="search_nothing">Nothing found</string>
+    <string name="search_failed">Search is unavailable right now</string>
+    <string name="search_bad_key">The search key was rejected, check it in settings</string>
+    <string name="weather_loading">Checking the weather</string>
+    <string name="weather_for">Weather: %1$s</string>
+    <string name="weather_failed">Weather is unavailable right now</string>
+    <string name="remembered">Remembered</string>
+    <string name="hint_again">Next question</string>
+    <string name="ready_again">Hold the mic button and speak</string>
+    <string name="not_heard">Did not catch that. Press an arrow, then hold the mic button while you speak.</string>
+    <string name="hint_retry">Ask again</string>
+    <string name="hint_hold">Hold and speak</string>
+    <string name="hint_close">Close</string>
+    <string name="hint_cancel">Cancel</string>
+    <string name="hint_stop_voice">Stop reading</string>
+    <string name="hint_then">then</string>
+    <string name="no_recognizer">Speech recognition is not available on this TV.</string>
+    <string name="recognizer_error">Speech recognition failed (code %1$d).</string>
+    <string name="no_mic_permission">The app has no microphone permission. Run install.sh again.</string>
+
+    <string name="error_no_key">Add an API key: open TV Voice Assistant from the app list.</string>
+    <string name="error_bad_key">The API key was rejected. Check it in TV Voice Assistant settings.</string>
+    <string name="error_no_balance">The account has run out of balance.</string>
+    <string name="error_rate_limit">Too many requests. Try again in a minute.</string>
+    <string name="error_offline">No connection to the server. Check the internet and ask again.</string>
+    <string name="error_server">The server answered with an error: %1$s</string>
+
+    <string name="settings_title">Voice assistant</string>
+    <string name="settings_subtitle">Hold the mic button on the remote anywhere, even over HDMI, and ask.</string>
+    <string name="settings_key">API key</string>
+    <string name="settings_key_saved">Saved (hidden). Enter a new one to replace it.</string>
+    <string name="settings_key_hint">sk-…</string>
+    <string name="settings_search_key">Web search key (Tavily, optional)</string>
+    <string name="settings_search_hint">tvly-…</string>
+    <string name="settings_search_note">Without it the assistant answers from what the model knows. Free key: tavily.com</string>
+    <string name="settings_memory">What the assistant knows about you</string>
+    <string name="settings_memory_hint">Lives in Moscow\nChecks the weather on gismeteo.ru</string>
+    <string name="settings_memory_note">One fact per line. The assistant adds facts itself when you tell it about yourself (\"remember, I live in Moscow\"); they are kept on the TV and sent with each question.</string>
+    <string name="settings_model">Model</string>
+    <string name="settings_base_url">Server (OpenAI-compatible)</string>
+    <string name="settings_speak">Read answers aloud</string>
+    <string name="settings_voice">Voice</string>
+    <string name="settings_voice_default">Engine default</string>
+    <string name="settings_voice_n">Voice %1$d</string>
+    <string name="settings_voice_online">, online</string>
+    <string name="settings_voice_note">Pick a voice to hear it. Online voices sound more natural; Google servers synthesize them.</string>
+    <string name="voice_sample">Hi! This is how I will read the answers.</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_test">Ask a test question</string>
+    <string name="settings_saved">Saved</string>
+    <string name="settings_search_ok">Web search works</string>
+    <string name="test_search">weather in Moscow</string>
+    <string name="test_question">Say hello in one short sentence.</string>
+</resources>

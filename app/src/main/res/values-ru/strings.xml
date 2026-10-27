@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Голосовой помощник</string>
+    <string name="system_prompt">Ты голосовой помощник на телевизоре. Отвечай на языке вопроса, коротко: две-четыре фразы, которые естественно звучат вслух. Без markdown, списков, таблиц и эмодзи, если об этом не просят.\n\nТы умеешь только отвечать на вопросы текстом и голосом. Управлять телевизором ты не можешь: не меняешь громкость, каналы и входы, не открываешь приложения, не включаешь видео и музыку, не ставишь таймеры, будильники и напоминания и не видишь, что на экране. Если просят такое, честно скажи одной фразой, что этого не умеешь, и, если знаешь, подскажи, как сделать это пультом. Никогда не делай вид, что выполнил действие.\n\nНе выдумывай факты, цифры, даты и названия. Если не знаешь или не уверен, так и скажи.</string>
+    <string name="prompt_today">Сейчас %1$s, %2$s.</string>
+    <string name="prompt_search_on">У тебя есть инструмент web_search. Пользуйся им для всего свежего и проверяемого: новости, курсы и цены, результаты матчей, расписания, события после даты твоих знаний. Для недавних событий ставь topic news и time_range, чтобы старые страницы не вытесняли свежие. Отвечай по найденному своими словами. После фразы, взятой из источника, ставь его номер в квадратных скобках, например [1], без ссылок. Если в результатах ответа нет, так и скажи. Погоду узнавай инструментом weather, а не поиском. Смотри на даты публикации: если все результаты старше того, о чём спрашивают, поищи ещё раз другими словами, с topic news и более коротким time_range, и только потом говори, что свежего не нашёл.</string>
+    <string name="prompt_search_off">Поиска в интернете у тебя нет, есть только инструмент weather для погоды. Если вопрос о свежих событиях, курсах или ценах, честно скажи, что не можешь это проверить, и что поиск включается в настройках помощника.</string>
+    <string name="prompt_memory">У тебя есть память на этом телевизоре. Когда пользователь рассказывает о себе что-то постоянное (имя, город, семья, любимые источники, команды, передачи, каким ему удобны ответы), сохрани это инструментом remember и коротко скажи, что запомнил. Когда просит что-то забыть или это изменилось, используй forget (и запомни новое). Разовые просьбы не сохраняй. Если вопрос зависит от места, а место не названо, бери сохранённый город; если для этого есть любимый источник, ищи сначала там. Сохраняет и удаляет только инструмент: сказать «запомнил» или «забыл», не вызвав remember или forget в этом же ответе, — ложь, потому что ничего не меняется. Вызывай инструмент каждый раз, когда просят, даже если по диалогу кажется, что это уже сделано; что сохранено на самом деле, видно только по списку ниже.</string>
+    <string name="prompt_facts">Что ты знаешь о пользователе:\n%1$s</string>
+
+    <string name="listening">Слушаю</string>
+    <string name="thinking">Думаю</string>
+    <string name="searching">Ищу в интернете</string>
+    <plurals name="search_found">
+        <item quantity="one">Найден %d источник</item>
+        <item quantity="few">Найдено %d источника</item>
+        <item quantity="many">Найдено %d источников</item>
+        <item quantity="other">Найдено %d источника</item>
+    </plurals>
+    <string name="search_nothing">Ничего не нашлось</string>
+    <string name="search_failed">Поиск сейчас недоступен</string>
+    <string name="search_bad_key">Ключ поиска не принят, проверьте его в настройках</string>
+    <string name="weather_loading">Смотрю погоду</string>
+    <string name="weather_for">Погода: %1$s</string>
+    <string name="weather_failed">Погода сейчас недоступна</string>
+    <string name="remembered">Запомнил</string>
+    <string name="hint_again">Ещё вопрос</string>
+    <string name="ready_again">Удерживайте кнопку микрофона и говорите</string>
+    <string name="not_heard">Не расслышал. Нажмите стрелку, затем удерживайте кнопку микрофона, пока говорите.</string>
+    <string name="hint_retry">Спросить ещё раз</string>
+    <string name="hint_hold">Удерживайте и говорите</string>
+    <string name="hint_close">Закрыть</string>
+    <string name="hint_cancel">Отменить</string>
+    <string name="hint_stop_voice">Остановить озвучку</string>
+    <string name="hint_then">затем</string>
+    <string name="no_recognizer">На этом телевизоре нет распознавания речи.</string>
+    <string name="recognizer_error">Ошибка распознавания речи (код %1$d).</string>
+    <string name="no_mic_permission">У приложения нет доступа к микрофону. Запустите install.sh ещё раз.</string>
+
+    <string name="error_no_key">Добавьте ключ API: откройте «Голосовой помощник» в списке приложений.</string>
+    <string name="error_bad_key">Ключ API не принят. Проверьте его в настройках помощника.</string>
+    <string name="error_no_balance">На счёте закончились деньги.</string>
+    <string name="error_rate_limit">Слишком много запросов. Попробуйте через минуту.</string>
+    <string name="error_offline">Нет связи с сервером. Проверьте интернет и спросите ещё раз.</string>
+    <string name="error_server">Сервер ответил ошибкой: %1$s</string>
+
+    <string name="settings_title">Голосовой помощник</string>
+    <string name="settings_subtitle">Удерживайте кнопку микрофона на пульте где угодно, даже на HDMI, и спрашивайте.</string>
+    <string name="settings_key">Ключ API</string>
+    <string name="settings_key_saved">Сохранён (скрыт). Введите новый, чтобы заменить.</string>
+    <string name="settings_key_hint">sk-…</string>
+    <string name="settings_search_key">Ключ поиска в интернете (Tavily, необязательно)</string>
+    <string name="settings_search_hint">tvly-…</string>
+    <string name="settings_search_note">Без него помощник отвечает только по своим знаниям. Бесплатный ключ: tavily.com</string>
+    <string name="settings_memory">Что помощник о вас знает</string>
+    <string name="settings_memory_hint">Живёт в Москве\nПогоду смотрит на gismeteo.ru</string>
+    <string name="settings_memory_note">Один факт на строку. Помощник сам добавляет факты, когда вы о себе рассказываете («запомни, я живу в Москве»); они хранятся на телевизоре и уходят вместе с каждым вопросом.</string>
+    <string name="settings_model">Модель</string>
+    <string name="settings_base_url">Сервер (совместимый с OpenAI)</string>
+    <string name="settings_speak">Читать ответы вслух</string>
+    <string name="settings_voice">Голос</string>
+    <string name="settings_voice_default">Стандартный</string>
+    <string name="settings_voice_n">Голос %1$d</string>
+    <string name="settings_voice_online">, онлайн</string>
+    <string name="settings_voice_note">Выберите голос, и он сразу прозвучит. Онлайн-голоса звучат естественнее: их синтезируют серверы Google.</string>
+    <string name="voice_sample">Привет! Вот так я буду читать ответы.</string>
+    <string name="settings_save">Сохранить</string>
+    <string name="settings_test">Задать проверочный вопрос</string>
+    <string name="settings_saved">Сохранено</string>
+    <string name="settings_search_ok">Поиск в интернете работает</string>
+    <string name="test_search">погода в Москве</string>
+    <string name="test_question">Поздоровайся одной короткой фразой.</string>
+</resources>

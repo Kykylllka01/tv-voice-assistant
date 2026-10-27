@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The viewer's question: a message bubble on the right, as a chat shows what you sent. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FF414158" />
+    <corners android:radius="12dp" />
+</shape>

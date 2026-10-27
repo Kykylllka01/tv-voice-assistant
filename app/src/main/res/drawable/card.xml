@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The assistant panel: graphite, a hairline rim, rounded like a chat app's dark mode. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FF292A2D" />
+    <corners android:radius="14dp" />
+    <stroke android:width="1px" android:color="#12FFFFFF" />
+</shape>

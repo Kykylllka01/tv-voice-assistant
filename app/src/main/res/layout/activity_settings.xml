@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/settings_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="640dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingTop="48dp"
+        android:paddingBottom="48dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_title"
+            android:textColor="#FFFFFFFF"
+            android:textSize="34sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="20dp"
+            android:text="@string/settings_subtitle"
+            android:textColor="#FF9A9CA6"
+            android:textSize="16sp" />
+
+        <TextView style="@style/Label" android:text="@string/settings_key" />
+        <EditText
+            android:id="@+id/key"
+            style="@style/Field"
+            android:hint="@string/settings_key_hint"
+            android:inputType="textPassword" />
+        <TextView
+            android:id="@+id/keyState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#FF6E7079"
+            android:textSize="13sp" />
+
+        <TextView style="@style/Label" android:text="@string/settings_search_key" />
+        <EditText
+            android:id="@+id/searchKey"
+            style="@style/Field"
+            android:hint="@string/settings_search_hint"
+            android:inputType="textPassword" />
+        <TextView
+            android:id="@+id/searchKeyState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#FF6E7079"
+            android:textSize="13sp" />
+
+        <TextView style="@style/Label" android:text="@string/settings_memory" />
+        <EditText
+            android:id="@+id/memory"
+            style="@style/Field"
+            android:layout_height="wrap_content"
+            android:gravity="top|start"
+            android:hint="@string/settings_memory_hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="3"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/settings_memory_note"
+            android:textColor="#FF6E7079"
+            android:textSize="13sp" />
+
+        <TextView style="@style/Label" android:text="@string/settings_model" />
+        <EditText android:id="@+id/model" style="@style/Field" android:inputType="text" />
+
+        <TextView style="@style/Label" android:text="@string/settings_base_url" />
+        <EditText android:id="@+id/baseUrl" style="@style/Field" android:inputType="textUri" />
+
+        <CheckBox
+            android:id="@+id/speak"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/field"
+            android:paddingStart="12dp"
+            android:text="@string/settings_speak"
+            android:textColor="#FFFFFFFF"
+            android:textSize="17sp" />
+
+        <TextView style="@style/Label" android:text="@string/settings_voice" />
+        <RadioGroup
+            android:id="@+id/voices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/settings_voice_note"
+            android:textColor="#FF6E7079"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/save"
+                style="@style/Action"
+                android:text="@string/settings_save" />
+
+            <Button
+                android:id="@+id/test"
+                style="@style/Action"
+                android:layout_marginStart="12dp"
+                android:text="@string/settings_test" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/testResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="#FFE8E8ED"
+            android:textSize="17sp" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Darkens the lower part of whatever is on screen so the panel reads over a bright film or HDMI picture. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="90" android:startColor="#C7000000" android:centerColor="#66000000" android:endColor="#00000000" />
+</shape>

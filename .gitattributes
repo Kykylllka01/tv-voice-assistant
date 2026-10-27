@@ -1,0 +1,4 @@
+# Shell scripts must keep LF to run on macOS and Linux, whatever the cloning machine converts.
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf

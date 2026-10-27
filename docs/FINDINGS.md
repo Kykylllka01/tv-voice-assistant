@@ -32,5 +32,12 @@ remote "TVC0GWBT" (vendor 1d5a, product c082), the Google Assistant (`com.google
    closes the remote's microphone through `AtvSearchAssistantService`, which a third-party app cannot reach.
    The overlay turns that into the interaction: "next question: press ▶, then hold the voice button".
 
+8. **Gboard's voice typing needs the Assistant.** With the keyboard open, Gboard (`AssistClient.onKeyboardOpened`)
+   binds `com.google.android.katniss/.search.serviceapi.KeyboardService`; with katniss disabled that is "not
+   found" and the keyboard offers no voice. The remote's button still starts the assistant role holder, and the
+   keyboard is hidden before the holder's `onCreate`: the ASSIST intent carries only `ASSIST_PACKAGE`, `ASSIST_UID`,
+   `invocation_phone_state` and an empty `ASSIST_CONTEXT`, and `InputMethodManager` reports no keyboard, so an app
+   cannot tell that the press was meant for a text field.
+
 So: **hold the voice button while speaking**, press an arrow before the next question, and keep the Assistant
 disabled.

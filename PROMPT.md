@@ -120,6 +120,7 @@ Things to try: "Какая погода на выходных?", "Открой Y
 | "Search is unavailable" while DeepSeek works | Tavily refuses some networks (it was seen refusing Russian IPs). Route `api.tavily.com` through a VPN on the router, or leave search off. |
 | A reminder fired but no panel | Repeat the `appops set ... SYSTEM_ALERT_WINDOW allow` in step 3. |
 | Recognition is poor | Step 6. |
+| Google keyboard voice typing does nothing (e.g. Play Store search) | Gboard's voice input goes through Google Assistant (`katniss` `KeyboardService`); with it disabled the keyboard has no voice, and the remote's button opens Sfera. Expected: type, or use the app's own voice search (YouTube, Kinopoisk have one). |
 
 Domains Sfera talks to: `api.deepseek.com` (or the server set in settings), `api.tavily.com`,
 `api.open-meteo.com`, `geocoding-api.open-meteo.com`, `www.google.com` (site icons). Speech recognition and

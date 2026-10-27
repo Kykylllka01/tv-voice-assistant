@@ -12,13 +12,41 @@
         <item name="android:colorAccent">#FF4D6BFE</item>
     </style>
 
-    <style name="Label">
+    <!-- A settings group: the assistant panel's graphite card. -->
+    <style name="Card">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
+        <item name="android:background">@drawable/card</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">18dp</item>
+    </style>
+
+    <style name="Section">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FFF8FAFF</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="Label">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">14dp</item>
         <item name="android:layout_marginBottom">6dp</item>
-        <item name="android:textColor">#FF9A9CA6</item>
+        <item name="android:textColor">#FFA3A3AD</item>
         <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Note">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:textColor">#FF6E7079</item>
+        <item name="android:textSize">13sp</item>
     </style>
 
     <style name="Field">
@@ -43,5 +71,10 @@
         <item name="android:textColor">#FFFFFFFF</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textAllCaps">false</item>
+    </style>
+
+    <!-- The main action: the accent blue, as the orb. -->
+    <style name="Action.Primary">
+        <item name="android:background">@drawable/action_primary</item>
     </style>
 </resources>

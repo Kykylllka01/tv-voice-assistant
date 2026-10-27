@@ -25,6 +25,8 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
     private var queued = 0
     private var next = 0
     private var talking = false
+    /** Closed: late callbacks from the engine and late calls from the panel do nothing. */
+    @Volatile private var released = false
     /** Sentences numbered below this were stopped; their late callbacks are ignored. */
     private var quietFrom = 0
     private val engine = Executors.newSingleThreadExecutor()
@@ -34,6 +36,7 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
     init {
         tts = TextToSpeech(context.applicationContext) { status ->
             main.post {
+                if (released) return@post
                 ready = status == TextToSpeech.SUCCESS
                 if (ready) {
                     engine.execute {
@@ -50,7 +53,7 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
                 main.post {
-                    if (number(utteranceId) < quietFrom) return@post
+                    if (released || number(utteranceId) < quietFrom) return@post
                     talking = true
                     onSpeaking(true)
                 }
@@ -70,7 +73,7 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
 
     private fun finished(id: String?) {
         main.post {
-            if (id == "u${queued - 1}" && talking) {
+            if (!released && id == "u${queued - 1}" && talking) {
                 talking = false
                 onSpeaking(false)
             }
@@ -79,6 +82,7 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
 
     /** Queues one sentence behind those already speaking. */
     fun say(sentence: String) {
+        if (released) return
         if (!ready) {
             waiting += sentence
             return
@@ -90,6 +94,7 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
 
     /** Silence now. Nothing to stop costs nothing: the engine is not called while it may be busy listening. */
     fun stop() {
+        if (released) return
         waiting.clear()
         if (next == quietFrom && !talking) return
         quietFrom = next
@@ -119,6 +124,9 @@ class Speaker(context: Context, private val voice: String, private val onSpeakin
     }
 
     fun release() {
+        if (released) return
+        released = true
+        main.removeCallbacksAndMessages(null)
         engine.execute {
             tts.stop()
             tts.shutdown()

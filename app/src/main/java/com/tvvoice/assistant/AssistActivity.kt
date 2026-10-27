@@ -10,10 +10,14 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.speech.SpeechRecognizer
 import android.text.format.DateFormat
+import android.util.Log
 import android.transition.ChangeBounds
 import android.transition.Fade
 import android.transition.TransitionManager
@@ -32,18 +36,23 @@ import com.tvvoice.assistant.chat.Answerer
 import com.tvvoice.assistant.chat.ChatClient
 import com.tvvoice.assistant.chat.ChatException
 import com.tvvoice.assistant.chat.Conversation
+import com.tvvoice.assistant.control.TvControl
+import com.tvvoice.assistant.reminders.Reminders
 import com.tvvoice.assistant.search.Source
 import com.tvvoice.assistant.search.WebSearch
 import com.tvvoice.assistant.settings.Memory
 import com.tvvoice.assistant.settings.Prefs
 import com.tvvoice.assistant.text.SentenceBuffer
+import com.tvvoice.assistant.ui.Favicons
 import com.tvvoice.assistant.ui.MicOrbView
+import com.tvvoice.assistant.ui.QrCode
 import com.tvvoice.assistant.ui.ShimmerTextView
 import com.tvvoice.assistant.ui.Typewriter
 import com.tvvoice.assistant.ui.WaveView
+import com.tvvoice.assistant.ui.WeatherView
 import com.tvvoice.assistant.voice.Speaker
 import com.tvvoice.assistant.voice.VoiceInput
-import com.tvvoice.assistant.weather.Place
+import com.tvvoice.assistant.weather.Forecast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +60,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
 import java.util.Date
 import java.util.Locale
 
@@ -63,7 +73,7 @@ import java.util.Locale
  */
 class AssistActivity : Activity(), VoiceInput.Listener {
     private enum class Stage { LISTENING, NOT_HEARD, THINKING, SEARCHING, ANSWERING, DONE, READY, ERROR }
-    private enum class Key { MIC, ARROWS, OK, BACK, THEN }
+    private enum class Key { MIC, ARROWS, UPDOWN, OK, BACK }
     private enum class Pill { NONE, SEARCHING, FOUND, FAILED }
     private data class Hint(val keys: List<Key>, val label: Int)
 
@@ -88,18 +98,35 @@ class AssistActivity : Activity(), VoiceInput.Listener {
     private lateinit var pillText: TextView
     private lateinit var pillQuery: TextView
     private lateinit var answer: TextView
-    private lateinit var answerScroll: View
+    private lateinit var answerScroll: ScrollView
     private lateinit var hints: LinearLayout
+    private lateinit var weatherView: WeatherView
+    private lateinit var sourcesPanel: View
+    private lateinit var qr: ImageView
+    private lateinit var sourceCount: TextView
+    private lateinit var sourceTitle: TextView
+    private lateinit var sourceSite: TextView
+    private lateinit var control: TvControl
+    private lateinit var reminders: Reminders
 
     private var stage = Stage.LISTENING
     private var speaking = false
     private var pillState = Pill.NONE
     private var shownHints: List<Hint> = emptyList()
+    /** The last search's sources; [sourceIndex] the one shown with its QR code, -1 when the answer is shown. */
+    private var sources: List<Source> = emptyList()
+    private var sourceIndex = -1
+    /** QR codes already drawn, by link: going back and forth through the sources encodes each once. */
+    private val qrCodes = HashMap<String, android.graphics.Bitmap>()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var asking: Job? = null
     private var closing = false
+    /** A typed question asked with `--ez quiet true` (debug): shown, not read out. */
+    private var quiet = false
     private val autoClose = Runnable { close() }
+    /** The running countdown to closing, 0 when there is none; any key starts it over. */
+    private var closeDelay = 0L
     private val dp by lazy { resources.displayMetrics.density }
     private val ease = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
 
@@ -122,24 +149,45 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         answer = findViewById(R.id.answer)
         hints = findViewById(R.id.hints)
         answerScroll = findViewById(R.id.answerScroll)
-        typewriter = Typewriter(answer, answerScroll as ScrollView)
-        findViewById<View>(R.id.root).setOnClickListener { close() }
+        weatherView = findViewById(R.id.weather)
+        sourcesPanel = findViewById(R.id.sourcesPanel)
+        qr = findViewById(R.id.qr)
+        sourceCount = findViewById(R.id.sourceCount)
+        sourceTitle = findViewById(R.id.sourceTitle)
+        sourceSite = findViewById(R.id.sourceSite)
+        typewriter = Typewriter(answer, answerScroll)
+        // Whether the answer overflows changes as it types: the "scroll" hint follows.
+        answerScroll.viewTreeObserver.addOnGlobalLayoutListener { renderHints(hintsFor()) }
+        // No "tap outside to close": on a TV the remote's OK is a click on whatever has focus, and once the panel
+        // was focusable it closed the panel instead of opening a source.
 
         prefs = Prefs(this)
         search = prefs.searchKey.takeIf { it.isNotBlank() }?.let(::WebSearch)
         memory = Memory(this)
-        conversation = Conversation(systemPrompt(this, search != null, memory.facts))
+        control = TvControl(this)
+        reminders = Reminders(this)
+        conversation = Conversation(systemPrompt(this, search != null, memory.facts, reminders.describe()))
         // Opened again soon after the last answer: "а завтра?" still knows what it follows.
         conversation.restore(memory.recent())
         voice = VoiceInput(this, this)
         speaker = Speaker(this, prefs.voice) { talking ->
             speaking = talking
-            if (talking) card.removeCallbacks(autoClose) else if (asking?.isActive != true) scheduleClose()
+            if (talking) holdClose() else if (asking?.isActive != true) scheduleClose()
             render()
         }
 
+        // The app list for open_app takes a PackageManager scan: warm it while the viewer speaks.
+        scope.launch(Dispatchers.IO) { control.apps }
         enter()
-        typed(intent)?.let(::onFinal) ?: listen()
+        start(intent)
+    }
+
+    /** A reminder going off, a typed question (debug), or the voice button: listen. */
+    private fun start(intent: Intent) {
+        // Only through the alias this app's own alarm starts: any other app could otherwise make the TV say anything.
+        if (intent.component?.className == Reminders.ALERT) intent.getStringExtra(EXTRA_REMINDER)?.let { return showReminder(it) }
+        typed(intent)?.let { return onFinal(it) }
+        listen()
     }
 
     /**
@@ -148,16 +196,17 @@ class AssistActivity : Activity(), VoiceInput.Listener {
      */
     private fun typed(intent: Intent): String? =
         intent.getStringExtra(EXTRA_QUESTION)?.takeIf { applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 }
+            ?.also { quiet = intent.getBooleanExtra(EXTRA_QUIET, false) }
 
     /** The voice button again while the panel is up: a follow-up question in the same dialogue. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (closing) return
-        typed(intent)?.let(::onFinal) ?: listen()
+        start(intent)
     }
 
     private fun listen() {
-        card.removeCallbacks(autoClose)
+        holdClose()
         asking?.cancel()
         speaker.stop()
         if (!voice.available) return fail(getString(R.string.no_recognizer))
@@ -167,6 +216,9 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         question.visibility = View.GONE
         pillState = Pill.NONE
         typewriter.clear()
+        weatherView.forecast = null
+        sources = emptyList()
+        sourceIndex = -1
         orb.setLevel(0f)
         wave.setLevel(0f)
         show(Stage.LISTENING)
@@ -207,9 +259,12 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         }
     }
 
-    /** The question as the viewer's own message, a bubble on the right; it rises in the first time. */
+    /**
+     * The question as the viewer's own message, a bubble on the right; it rises in the first time. While it is
+     * still being spoken a long one shows its end, the words just heard; once final, its start, in two lines.
+     */
     private fun showQuestion(text: String, live: Boolean) {
-        question.text = text
+        question.text = if (live && text.length > LIVE_TAIL) "…" + text.takeLast(LIVE_TAIL).trimStart() else text
         question.setTextColor(if (live) LIVE else TEXT)
         if (question.visibility != View.VISIBLE) rise(question)
     }
@@ -221,8 +276,11 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         if (key.isBlank()) return fail(getString(R.string.error_no_key))
         show(Stage.THINKING)
         var sentences = SentenceBuffer()
-        val speak = prefs.speak
-        val answerer = Answerer(ChatClient(prefs.baseUrl, key), conversation, prefs.model, search, memory)
+        val speak = prefs.speak && !quiet
+        val answerer = Answerer(
+            ChatClient(prefs.baseUrl, key), conversation, prefs.model, search, memory,
+            control = control, reminders = reminders,
+        )
         asking = scope.launch {
             try {
                 answerer.answer(text, object : Answerer.Events {
@@ -237,6 +295,7 @@ class AssistActivity : Activity(), VoiceInput.Listener {
                         typewriter.clear()
                         sentences = SentenceBuffer()
                         favs.removeAllViews()
+                        this@AssistActivity.sources = emptyList()
                         pillText.text = getString(R.string.searching)
                         pillQuery.text = query
                         setPill(Pill.SEARCHING)
@@ -247,6 +306,7 @@ class AssistActivity : Activity(), VoiceInput.Listener {
                         pillText.text = if (sources.isEmpty()) getString(R.string.search_nothing)
                         else resources.getQuantityString(R.plurals.search_found, sources.size, sources.size)
                         showFavicons(sources)
+                        this@AssistActivity.sources = sources
                         setPill(Pill.FOUND)
                     }
 
@@ -267,9 +327,10 @@ class AssistActivity : Activity(), VoiceInput.Listener {
                         show(Stage.SEARCHING)
                     }
 
-                    override fun onForecast(place: Place) {
-                        pillText.text = getString(R.string.weather_for, place.name)
+                    override fun onForecast(forecast: Forecast) {
+                        pillText.text = getString(R.string.weather_for, forecast.place.name)
                         favs.removeAllViews()
+                        weatherView.forecast = forecast
                         setPill(Pill.FOUND)
                     }
 
@@ -286,6 +347,21 @@ class AssistActivity : Activity(), VoiceInput.Listener {
                         setPill(Pill.FOUND)
                         pillQuery.visibility = View.VISIBLE
                     }
+
+                    override fun onAction(action: Answerer.Action) {
+                        val (label, detail) = when (action) {
+                            is Answerer.Action.Opened -> getString(R.string.app_opening, action.app) to ""
+                            is Answerer.Action.YouTube -> getString(R.string.youtube_searching) to action.query
+                            is Answerer.Action.Volume -> getString(R.string.volume_set, action.percent) to ""
+                            is Answerer.Action.Reminder ->
+                                getString(R.string.reminder_set, action.at.format(Reminders.HH_MM)) to action.text
+                        }
+                        pillText.text = label
+                        pillQuery.text = detail
+                        favs.removeAllViews()
+                        setPill(Pill.FOUND)
+                        pillQuery.visibility = if (detail.isEmpty()) View.GONE else View.VISIBLE
+                    }
                 })
                 memory.saveRecent(conversation.history)
                 if (speak) sentences.flush()?.let(speaker::say)
@@ -296,6 +372,10 @@ class AssistActivity : Activity(), VoiceInput.Listener {
                 throw e
             } catch (e: ChatException) {
                 fail(message(e))
+            } catch (e: Exception) {
+                // Anything else (a tool, the system refusing something) is an error on the panel, never a crash.
+                Log.w("TvVoice", "answer failed", e)
+                fail(getString(R.string.error_server, e.message ?: e.javaClass.simpleName))
             }
         }
     }
@@ -322,12 +402,99 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         typewriter.finish()
     }
 
-    /** Nothing more to say: the panel goes away by itself after a while, as a system overlay would. */
-    private fun scheduleClose() {
+    /**
+     * Nothing more to say: the panel goes away by itself once nothing has happened for [delay], as a system
+     * overlay would. Never while it listens or works on an answer (a long question used to run into the
+     * countdown), nor while a source is up for its QR code; any key on the remote starts the countdown over.
+     */
+    private fun scheduleClose(delay: Long = AUTO_CLOSE_MS) {
+        holdClose()
+        if (stage in BUSY_STAGES || sourceIndex >= 0) return
+        closeDelay = delay
+        card.postDelayed(autoClose, delay)
+    }
+
+    private fun holdClose() {
         card.removeCallbacks(autoClose)
-        // Never while it listens or works on an answer: a long question used to run into the countdown.
-        if (stage in BUSY_STAGES) return
-        card.postDelayed(autoClose, AUTO_CLOSE_MS)
+        closeDelay = 0
+    }
+
+    /** The viewer is there: a key press restarts the countdown, whatever the key does. */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && closeDelay > 0) scheduleClose(closeDelay)
+        return super.dispatchKeyEvent(event)
+    }
+
+    // ---- sources and reminders -----------------------------------------------------------------------------------
+
+    /** Source [i] (wrapping round) with a QR code of its link, in place of the answer, until OK or Back. */
+    private fun showSource(i: Int) {
+        if (sources.isEmpty()) return
+        morph()
+        sourceIndex = (i + sources.size) % sources.size
+        val source = sources[sourceIndex]
+        // One pixel a module, drawn without smoothing, so the code stays sharp at any size.
+        val code = qrCodes.getOrPut(source.url) { QrCode.encode(source.url).toBitmap() }
+        qr.setImageDrawable(BitmapDrawable(resources, code).apply { isFilterBitmap = false })
+        sourceCount.text = getString(R.string.sources_count, sourceIndex + 1, sources.size)
+        sourceTitle.text = source.title.ifEmpty { source.url }
+        sourceSite.text = source.site
+        holdClose()
+        render()
+    }
+
+    /** Stops listening or the answer on its way; the panel waits for the next question. */
+    private fun cancelStep() {
+        voice.stop()
+        asking?.cancel()
+        speaker.stop()
+        question.visibility = View.GONE
+        typewriter.clear()
+        weatherView.forecast = null
+        sources = emptyList()
+        pillState = Pill.NONE
+        show(Stage.READY)
+        scheduleClose()
+    }
+
+    private fun hideSources() {
+        morph()
+        sourceIndex = -1
+        render()
+        scheduleClose()
+    }
+
+    /** A reminder going off: the panel over whatever is on, a chime, the text shown and read out. */
+    private fun showReminder(text: String) {
+        // Whatever was going on (listening, an answer) gives way to the reminder.
+        asking?.cancel()
+        voice.stop()
+        speaker.stop()
+        question.visibility = View.GONE
+        weatherView.forecast = null
+        sources = emptyList()
+        sourceIndex = -1
+        pillText.text = getString(R.string.reminder)
+        pillQuery.text = ZonedDateTime.now().format(Reminders.HH_MM)
+        favs.removeAllViews()
+        setPill(Pill.FOUND)
+        pillQuery.visibility = View.VISIBLE
+        say(text)
+        show(Stage.DONE)
+        chime()
+        if (prefs.speak) speaker.say(text)
+        scheduleClose(REMINDER_CLOSE_MS)
+    }
+
+    private var tone: ToneGenerator? = null
+
+    private fun chime() {
+        tone?.release()
+        tone = try {
+            ToneGenerator(AudioManager.STREAM_MUSIC, 80).apply { startTone(ToneGenerator.TONE_PROP_ACK, 400) }
+        } catch (e: RuntimeException) {
+            null    // the audio system is busy: the reminder still shows and speaks
+        }
     }
 
     // ---- what each stage shows -------------------------------------------------------------------------------
@@ -335,7 +502,7 @@ class AssistActivity : Activity(), VoiceInput.Listener {
     private fun show(next: Stage) {
         if (next != stage) morph()
         stage = next
-        if (stage in BUSY_STAGES) card.removeCallbacks(autoClose)
+        if (stage in BUSY_STAGES) holdClose()
         render()
     }
 
@@ -374,7 +541,10 @@ class AssistActivity : Activity(), VoiceInput.Listener {
 
         pill.visibility = if (pillState != Pill.NONE && stage in PILL_STAGES) View.VISIBLE else View.GONE
 
-        val answerShown = stage in ANSWER_STAGES && !(stage == Stage.READY && answer.text.isEmpty())
+        val answerShown = stage in ANSWER_STAGES && !(stage == Stage.READY && answer.text.isEmpty()) && sourceIndex < 0
+        weatherView.visibility =
+            if (weatherView.forecast != null && stage in WEATHER_STAGES && sourceIndex < 0) View.VISIBLE else View.GONE
+        sourcesPanel.visibility = if (sourceIndex >= 0) View.VISIBLE else View.GONE
         answerScroll.visibility = if (answerShown) View.VISIBLE else View.GONE
         answer.setTextColor(
             when (stage) {
@@ -396,7 +566,10 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         render()
     }
 
-    /** One small round "favicon" per source, the site's first letter, popping in one after another. */
+    /**
+     * One small round icon per source, popping in one after another: the site's first letter at once, its real
+     * icon in place of the letter as soon as it loads.
+     */
     private fun showFavicons(sources: List<Source>) {
         favs.removeAllViews()
         sources.take(MAX_FAVICONS).forEachIndexed { i, source ->
@@ -421,19 +594,49 @@ class AssistActivity : Activity(), VoiceInput.Listener {
             fav.scaleY = 0.6f
             fav.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(70L * i).setDuration(300)
                 .setInterpolator(ease).start()
+            scope.launch {
+                val icon = Favicons.load(source.site, PILL) ?: return@launch
+                fav.text = ""
+                fav.background = BitmapDrawable(resources, icon)
+            }
         }
     }
 
+    /** The answer is longer than its window: up and down scroll it. */
+    private val scrollable: Boolean
+        get() = answerScroll.visibility == View.VISIBLE &&
+            (answerScroll.canScrollVertically(1) || answerScroll.canScrollVertically(-1))
+
+    /**
+     * The keys that work right now, each with what it does, one step at a time. A new question is two steps on
+     * this remote (an arrow, then the voice button), so the arrow says "new question" and the panel it opens
+     * says "hold and speak", rather than one hint chaining both.
+     */
     private fun hintsFor(): List<Hint> {
+        if (sourceIndex >= 0) {
+            return listOfNotNull(
+                Hint(listOf(Key.ARROWS), R.string.hint_other_source).takeIf { sources.size > 1 },
+                Hint(listOf(Key.OK), R.string.hint_browser).takeIf { control.browser != null },
+                Hint(listOf(Key.BACK), R.string.hint_back),
+            )
+        }
         val close = Hint(listOf(Key.BACK), R.string.hint_close)
-        val again = listOf(Key.ARROWS, Key.THEN, Key.MIC)
-        return when {
-            stage == Stage.LISTENING -> listOf(Hint(listOf(Key.MIC), R.string.hint_hold), close)
-            stage == Stage.READY -> listOf(close)
-            stage == Stage.THINKING || stage == Stage.SEARCHING -> listOf(Hint(listOf(Key.BACK), R.string.hint_cancel))
-            stage == Stage.NOT_HEARD || stage == Stage.ERROR -> listOf(Hint(again, R.string.hint_retry), close)
-            speaking -> listOf(Hint(listOf(Key.OK), R.string.hint_stop_voice), close)
-            else -> listOf(Hint(again, R.string.hint_again), close)
+        val cancel = Hint(listOf(Key.BACK), R.string.hint_cancel)
+        val hold = Hint(listOf(Key.MIC), R.string.hint_hold)
+        val next = Hint(listOf(Key.ARROWS), R.string.hint_again)
+        val scroll = if (scrollable && stage !in BUSY_STAGES) listOf(Hint(listOf(Key.UPDOWN), R.string.hint_scroll))
+        else emptyList()
+        return scroll + when {
+            stage == Stage.LISTENING -> listOf(hold, cancel)
+            stage == Stage.READY -> listOf(hold, close)
+            stage == Stage.THINKING || stage == Stage.SEARCHING -> listOf(cancel)
+            stage == Stage.NOT_HEARD || stage == Stage.ERROR -> listOf(Hint(listOf(Key.ARROWS), R.string.hint_retry), close)
+            speaking -> listOf(Hint(listOf(Key.OK), R.string.hint_stop_voice), next, close)
+            else -> listOfNotNull(
+                Hint(listOf(Key.OK), R.string.hint_sources).takeIf { sources.isNotEmpty() && stage == Stage.DONE },
+                next,
+                close,
+            )
         }
     }
 
@@ -469,12 +672,6 @@ class AssistActivity : Activity(), VoiceInput.Listener {
     private fun keyView(key: Key): View {
         val pad = (4 * dp).toInt()
         return when (key) {
-            Key.THEN -> TextView(this).apply {
-                setText(R.string.hint_then)
-                textSize = 8f
-                gravity = Gravity.CENTER
-                setTextColor(THEN)
-            }
             Key.OK -> TextView(this).apply {
                 text = "OK"
                 textSize = 7f
@@ -490,6 +687,7 @@ class AssistActivity : Activity(), VoiceInput.Listener {
                     when (key) {
                         Key.MIC -> R.drawable.ic_key_mic
                         Key.ARROWS -> R.drawable.ic_key_arrows
+                        Key.UPDOWN -> R.drawable.ic_key_updown
                         else -> R.drawable.ic_key_back
                     },
                 )
@@ -540,19 +738,48 @@ class AssistActivity : Activity(), VoiceInput.Listener {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            close()
+        // A held OK or Back repeats: the repeats would run the next step (open the browser, close the panel).
+        if (event.repeatCount > 0 && keyCode in SINGLE_PRESS) return true
+        // A source is up: left and right go through the sources, OK opens it in the TV's browser, Back returns to
+        // the answer.
+        if (sourceIndex >= 0) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> showSource(sourceIndex - 1)
+                KeyEvent.KEYCODE_DPAD_RIGHT -> showSource(sourceIndex + 1)
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER ->
+                    if (!control.browse(sources[sourceIndex].url)) hideSources()
+                KeyEvent.KEYCODE_BACK -> hideSources()
+                else -> return super.onKeyDown(keyCode, event)    // volume and the like keep working
+            }
             return true
         }
-        // OK while the answer is read out: stop talking, keep the panel.
+        // Back undoes the step in progress (listening, an answer on its way) and keeps the panel, so a stray press
+        // next to the voice button does not throw it all away; with nothing in progress it closes the panel.
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            when (stage) {
+                Stage.LISTENING, Stage.THINKING, Stage.SEARCHING -> cancelStep()
+                else -> close()
+            }
+            return true
+        }
+        // OK while the answer is read out: stop talking, keep the panel. After it, on an answer with sources:
+        // show them, each with a QR code to open on a phone.
         if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
-            speaker.stop()
+            if (speaking) speaker.stop() else if (sources.isNotEmpty() && stage == Stage.DONE) showSource(0)
+            return true
+        }
+        // Up and down page through an answer longer than its window, and stop it following the typing.
+        val up = keyCode == KeyEvent.KEYCODE_DPAD_UP
+        if ((up || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) && scrollable) {
+            typewriter.follow = false
+            val page = (answerScroll.height * 0.7f).toInt()
+            answerScroll.smoothScrollBy(0, if (up) -page else page)
             return true
         }
         // An arrow readies a follow-up. The remote keeps its microphone "open" after a session only Google's
         // privileged assistant can close, so the next voice press would close it instead; any real key press
         // resets the remote (docs/FINDINGS.md, 7). The arrow is that key press, given a meaning.
-        if (keyCode in ARROWS && stage !in BUSY_STAGES) {
+        if (keyCode in ARROWS && stage !in BUSY_STAGES && asking?.isActive != true) {
             speaker.stop()
             // "Did not catch that, press an arrow" has been done; only a real answer stays on screen.
             if (stage == Stage.NOT_HEARD || stage == Stage.ERROR) typewriter.clear()
@@ -570,6 +797,7 @@ class AssistActivity : Activity(), VoiceInput.Listener {
     }
 
     override fun onDestroy() {
+        tone?.release()
         card.removeCallbacks(autoClose)
         scope.cancel()
         voice.release()
@@ -578,9 +806,16 @@ class AssistActivity : Activity(), VoiceInput.Listener {
     }
 
     companion object {
-        private const val AUTO_CLOSE_MS = 25_000L
+        /** The text of a reminder going off, for [ReminderReceiver][com.tvvoice.assistant.reminders.ReminderReceiver]. */
+        const val EXTRA_REMINDER = "reminder"
+        private const val AUTO_CLOSE_MS = 45_000L
+        private const val REMINDER_CLOSE_MS = 60_000L
         private const val EXTRA_QUESTION = "question"
+        private const val EXTRA_QUIET = "quiet"
         private const val MAX_FAVICONS = 5
+        /** Characters of a long question shown while it is still being spoken. */
+        private const val LIVE_TAIL = 90
+        private val SINGLE_PRESS = setOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)
         private val ARROWS = setOf(
             KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
@@ -588,6 +823,7 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         private val STATUS_STAGES = setOf(Stage.LISTENING, Stage.THINKING, Stage.READY)
         private val PILL_STAGES = setOf(Stage.SEARCHING, Stage.ANSWERING, Stage.DONE)
         private val BUSY_STAGES = setOf(Stage.LISTENING, Stage.THINKING, Stage.SEARCHING)
+        private val WEATHER_STAGES = setOf(Stage.ANSWERING, Stage.DONE)
         private val ANSWER_STAGES = setOf(Stage.ANSWERING, Stage.DONE, Stage.READY, Stage.NOT_HEARD, Stage.ERROR)
 
         private val TEXT = Color.parseColor("#FFF8FAFF")
@@ -595,7 +831,6 @@ class AssistActivity : Activity(), VoiceInput.Listener {
         private val MUTED = Color.parseColor("#FFD5D5DC")
         private val ERROR = Color.parseColor("#FFF4AFAF")
         private val SECONDARY = Color.parseColor("#FFA3A3AD")
-        private val THEN = Color.parseColor("#FF6F6F78")
         private val KEY = Color.parseColor("#FFE1E1E8")
         private val PILL = Color.parseColor("#FF35363A")
         private val FAVICON_COLORS = intArrayOf(
@@ -607,7 +842,12 @@ class AssistActivity : Activity(), VoiceInput.Listener {
          * The system prompt: how to answer and what the assistant cannot do, today's date and time (the model
          * has no clock), and whether it can search the web, so it neither guesses at news nor claims to look.
          */
-        fun systemPrompt(context: Context, searchOn: Boolean, facts: List<String>): String {
+        fun systemPrompt(
+            context: Context,
+            searchOn: Boolean,
+            facts: List<String>,
+            reminders: List<String> = emptyList(),
+        ): String {
             val now = Date()
             val today = context.getString(
                 R.string.prompt_today,
@@ -617,8 +857,10 @@ class AssistActivity : Activity(), VoiceInput.Listener {
             val search = context.getString(if (searchOn) R.string.prompt_search_on else R.string.prompt_search_off)
             val known = if (facts.isEmpty()) null
             else context.getString(R.string.prompt_facts, facts.joinToString("\n") { "- $it" })
+            val set = if (reminders.isEmpty()) null
+            else context.getString(R.string.prompt_reminders, reminders.joinToString("\n"))
             return listOfNotNull(
-                context.getString(R.string.system_prompt), today, search, context.getString(R.string.prompt_memory), known,
+                context.getString(R.string.system_prompt), today, search, context.getString(R.string.prompt_memory), known, set,
             ).joinToString("\n\n")
         }
     }

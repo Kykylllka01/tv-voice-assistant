@@ -10,12 +10,15 @@ import kotlin.math.sin
 
 /** A source number in the answer, "[2]" drawn as a small grey pill raised a little above the line. */
 class CiteSpan(private val density: Float) : ReplacementSpan() {
-    private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFB9B9C2")
-        textAlign = Paint.Align.CENTER
+    // One set of paints for every badge: the answer is rebuilt as it types, badges and all.
+    private companion object {
+        val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFB9B9C2.toInt()
+            textAlign = Paint.Align.CENTER
+        }
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF3A3B40.toInt() }
+        val box = RectF()
     }
-    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FF3A3B40") }
-    private val box = RectF()
 
     private fun text(source: CharSequence, start: Int, end: Int) =
         source.subSequence(start, end).toString().trim().removePrefix("[").removeSuffix("]")

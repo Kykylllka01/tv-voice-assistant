@@ -24,17 +24,25 @@ class Typewriter(private val view: TextView, private val scroller: ScrollView?) 
             val dt = if (lastFrame == 0L) 0.016 else (now - lastFrame) / 1e9
             lastFrame = now
             val backlog = target.length - shown
+            val before = shown.toInt()
             shown = (shown + dt * pace(backlog)).coerceAtMost(target.length.toDouble())
-            render()
+            // Most frames add no whole character: nothing to rebuild.
+            if (shown.toInt() != before) render()
             if (shown < target.length) view.postOnAnimation(this) else running = false
         }
     }
 
+    private var bouncing = false
+
+    /** The equalizer at the end of the answer, about 30 frames a second, one loop at a time. */
     private val bounce = object : Runnable {
         override fun run() {
-            if (!speaking) return
+            if (!speaking) {
+                bouncing = false
+                return
+            }
             view.invalidate()
-            view.postOnAnimation(this)
+            view.postDelayed(this, 33)
         }
     }
 
@@ -43,7 +51,10 @@ class Typewriter(private val view: TextView, private val scroller: ScrollView?) 
             if (field == value) return
             field = value
             render()
-            if (value) view.postOnAnimation(bounce)
+            if (value && !bouncing) {
+                bouncing = true
+                view.postOnAnimation(bounce)
+            }
         }
 
     fun append(text: String) {
@@ -61,7 +72,14 @@ class Typewriter(private val view: TextView, private val scroller: ScrollView?) 
         render()
     }
 
+    /**
+     * Keeps the newest line in view while the answer types. Off once the viewer scrolls with the remote, so the
+     * text they went back to read stays put; a new answer turns it on again.
+     */
+    var follow = true
+
     fun clear() {
+        follow = true
         target.clear()
         shown = 0.0
         view.text = ""
@@ -70,7 +88,9 @@ class Typewriter(private val view: TextView, private val scroller: ScrollView?) 
     val text: String get() = target.toString()
 
     private fun render() {
-        val out = SpannableStringBuilder(Speakable.display(target.substring(0, shown.toInt())))
+        // A source number still being typed ("[2") would flash as raw text before it turns into a badge.
+        val typed = target.substring(0, shown.toInt()).replace(UNFINISHED, "")
+        val out = SpannableStringBuilder(Speakable.display(typed))
         // Right to left, so earlier offsets stay valid as each number and the space before it collapse.
         // A word joiner in front keeps the badge on its word's line: on its own, a replaced run is an object a
         // line may break before, and a lone badge started the next line.
@@ -84,11 +104,12 @@ class Typewriter(private val view: TextView, private val scroller: ScrollView?) 
             out.setSpan(EqualizerSpan(density), out.length - 1, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         view.text = out
-        scroller?.post { scroller.fullScroll(ScrollView.FOCUS_DOWN) }
+        if (follow) scroller?.post { scroller.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
     private companion object {
         val SOURCE = Regex("""\s*\[(\d+(?:,\s*\d+)*)]""")
+        val UNFINISHED = Regex("""\s*\[[\d,\s]*$""")
         const val OBJECT = "￼"
         const val JOINER = "⁠"
 

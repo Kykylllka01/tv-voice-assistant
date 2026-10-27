@@ -30,6 +30,7 @@ class ChatClient(private val baseUrl: String, private val apiKey: String) {
         if (apiKey.isBlank()) throw ChatException(ChatException.Kind.NO_KEY, "no API key")
         val answer = StringBuilder()
         val calls = ToolCallAssembler()
+        var done = false
         val connection = withContext(Dispatchers.IO) { open(body) }
         try {
             withContext(Dispatchers.IO) {
@@ -43,23 +44,40 @@ class ChatClient(private val baseUrl: String, private val apiKey: String) {
                             }
                             is Sse.Event.ToolCallPiece -> calls.add(event)
                             is Sse.Event.Failure -> throw ChatException(ChatException.Kind.SERVER, event.message)
-                            Sse.Event.Done -> break
+                            Sse.Event.Done -> {
+                                done = true
+                                break
+                            }
                             null -> Unit
                         }
                     }
                 }
             }
         } catch (e: IOException) {
-            throw ChatException(ChatException.Kind.OFFLINE, e.message ?: "connection lost")
-        } finally {
             connection.disconnect()
+            throw ChatException(ChatException.Kind.OFFLINE, e.message ?: "connection lost")
+        } catch (e: Throwable) {
+            connection.disconnect()
+            throw e
         }
-        return Reply(answer.toString(), calls.calls())
+        // The connection stays open on success, so the next round (a tool's result, a follow-up) reuses it instead
+        // of a new TLS handshake.
+        val reply = Reply(answer.toString(), calls.calls())
+        // A stream that stops without its end mark was cut off; a reply with neither text nor a call says nothing.
+        if (!done) throw ChatException(ChatException.Kind.SERVER, "the answer was cut off")
+        if (reply.text.isBlank() && reply.toolCalls.isEmpty()) throw ChatException(ChatException.Kind.SERVER, "empty answer")
+        return reply
     }
 
     private fun open(body: String): HttpURLConnection {
-        val url = URL(baseUrl.trimEnd('/') + "/chat/completions")
-        val c = url.openConnection() as HttpURLConnection
+        // A typo in the server field (no "https://", another scheme) is an error to show, not a crash.
+        val c = try {
+            URL(baseUrl.trimEnd('/') + "/chat/completions").openConnection() as HttpURLConnection
+        } catch (e: java.net.MalformedURLException) {
+            throw ChatException(ChatException.Kind.SERVER, "bad server address: $baseUrl")
+        } catch (e: ClassCastException) {
+            throw ChatException(ChatException.Kind.SERVER, "bad server address: $baseUrl")
+        }
         c.requestMethod = "POST"
         c.connectTimeout = 10_000
         c.readTimeout = 60_000
@@ -72,7 +90,8 @@ class ChatClient(private val baseUrl: String, private val apiKey: String) {
             val code = c.responseCode
             if (code !in 200..299) {
                 val detail = c.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                Log.w("TvVoice", "chat HTTP $code: ${messageOf(detail)}")
+                // An error body can echo the request; the key never goes to the log.
+                Log.w("TvVoice", "chat HTTP $code: ${messageOf(detail).replace(apiKey, "***")}")
                 c.disconnect()
                 throw ChatException(kindOf(code), messageOf(detail).ifBlank { "HTTP $code" })
             }

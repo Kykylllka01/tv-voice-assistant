@@ -10,14 +10,15 @@ class Prefs(context: Context) {
         get() = secret(KEY)
         set(value) = putSecret(KEY, value)
 
-    val hasKey: Boolean get() = prefs.contains(KEY)
+    /** A key that is saved and can still be opened; one the Keystore lost counts as none, so settings ask again. */
+    val hasKey: Boolean get() = apiKey.isNotEmpty()
 
     /** The Tavily key for web search; without it the assistant answers from what the model knows. */
     var searchKey: String
         get() = secret(SEARCH_KEY)
         set(value) = putSecret(SEARCH_KEY, value)
 
-    val hasSearchKey: Boolean get() = prefs.contains(SEARCH_KEY)
+    val hasSearchKey: Boolean get() = searchKey.isNotEmpty()
 
     private fun secret(name: String) = SecureStore.decrypt(prefs.getString(name, null)).orEmpty()
 

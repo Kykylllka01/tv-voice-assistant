@@ -15,6 +15,7 @@ SS = 4  # supersampling
 GRAPHITE = (33, 34, 38)
 RIM = (255, 255, 255, 18)  # 7% white hairline
 TEXT = (248, 250, 255)
+MUTED = (163, 163, 173)
 FONT = "C:/Windows/Fonts/seguisb.ttf"  # Segoe UI Semibold; the design's Inter is not on Windows by default
 
 
@@ -57,13 +58,12 @@ def banner():
     orb = 136 * SS
     pad = 50 * SS
     draw_orb(img, pad + orb / 2, h / 2, orb, 3 * SS)
-    font = ImageFont.truetype(FONT, 47 * SS)
-    line_h = int(47 * SS * 1.15)
     x = pad + orb + 41 * SS
-    y = h / 2 - line_h
     d = ImageDraw.Draw(img)
-    for i, line in enumerate(["Голосовой", "помощник"]):
-        d.text((x, y + i * line_h + line_h / 2), line, font=font, fill=TEXT, anchor="lm")
+    # The name large, what it is small under it.
+    d.text((x, h / 2 - 2 * SS), "Сфера", font=ImageFont.truetype(FONT, 74 * SS), fill=TEXT, anchor="ls")
+    d.text((x + 3 * SS, h / 2 + 58 * SS), "голосовой помощник", font=ImageFont.truetype(FONT, 27 * SS),
+           fill=MUTED, anchor="ls")
     out = os.path.join(RES, "drawable-xhdpi", "banner.png")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     img.resize((640, 360), Image.LANCZOS).convert("RGB").save(out, optimize=True)

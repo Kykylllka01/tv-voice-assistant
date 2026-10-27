@@ -1,111 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Settings in the overlay's language: the orb and the name on top, the actions right under them (so the screen
+     opens at its top), then each group on a graphite card like the assistant panel. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/settings_bg"
     android:fillViewport="true">
 
     <LinearLayout
-        android:layout_width="640dp"
+        android:layout_width="680dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingTop="48dp"
+        android:paddingTop="40dp"
         android:paddingBottom="48dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_title"
-            android:textColor="#FFFFFFFF"
-            android:textSize="34sp" />
-
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="20dp"
-            android:text="@string/settings_subtitle"
-            android:textColor="#FF9A9CA6"
-            android:textSize="16sp" />
+            android:clipChildren="false"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <TextView style="@style/Label" android:text="@string/settings_key" />
-        <EditText
-            android:id="@+id/key"
-            style="@style/Field"
-            android:hint="@string/settings_key_hint"
-            android:inputType="textPassword" />
-        <TextView
-            android:id="@+id/keyState"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="#FF6E7079"
-            android:textSize="13sp" />
+            <com.tvvoice.assistant.ui.MicOrbView
+                android:id="@+id/orb"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="-6dp" />
 
-        <TextView style="@style/Label" android:text="@string/settings_search_key" />
-        <EditText
-            android:id="@+id/searchKey"
-            style="@style/Field"
-            android:hint="@string/settings_search_hint"
-            android:inputType="textPassword" />
-        <TextView
-            android:id="@+id/searchKeyState"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="#FF6E7079"
-            android:textSize="13sp" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
 
-        <TextView style="@style/Label" android:text="@string/settings_memory" />
-        <EditText
-            android:id="@+id/memory"
-            style="@style/Field"
-            android:layout_height="wrap_content"
-            android:gravity="top|start"
-            android:hint="@string/settings_memory_hint"
-            android:inputType="textMultiLine|textCapSentences"
-            android:minLines="3"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/settings_memory_note"
-            android:textColor="#FF6E7079"
-            android:textSize="13sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_title"
+                    android:textColor="#FFF8FAFF"
+                    android:textSize="32sp" />
 
-        <TextView style="@style/Label" android:text="@string/settings_model" />
-        <EditText android:id="@+id/model" style="@style/Field" android:inputType="text" />
-
-        <TextView style="@style/Label" android:text="@string/settings_base_url" />
-        <EditText android:id="@+id/baseUrl" style="@style/Field" android:inputType="textUri" />
-
-        <CheckBox
-            android:id="@+id/speak"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="18dp"
-            android:background="@drawable/field"
-            android:paddingStart="12dp"
-            android:text="@string/settings_speak"
-            android:textColor="#FFFFFFFF"
-            android:textSize="17sp" />
-
-        <TextView style="@style/Label" android:text="@string/settings_voice" />
-        <RadioGroup
-            android:id="@+id/voices"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/settings_voice_note"
-            android:textColor="#FF6E7079"
-            android:textSize="13sp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/settings_subtitle"
+                    android:textColor="#FFA3A3AD"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -114,23 +60,106 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/save"
-                style="@style/Action"
-                android:text="@string/settings_save" />
+                android:id="@+id/test"
+                style="@style/Action.Primary"
+                android:text="@string/settings_test" />
 
             <Button
-                android:id="@+id/test"
+                android:id="@+id/save"
                 style="@style/Action"
                 android:layout_marginStart="12dp"
-                android:text="@string/settings_test" />
+                android:text="@string/settings_save" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/testResult"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textColor="#FFE8E8ED"
-            android:textSize="17sp" />
+            android:layout_marginTop="14dp"
+            android:background="@drawable/card"
+            android:lineSpacingExtra="4sp"
+            android:padding="18dp"
+            android:textColor="#FFF8FAFF"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <!-- Keys -->
+        <LinearLayout style="@style/Card">
+
+            <TextView style="@style/Section" android:text="@string/settings_section_keys" />
+
+            <TextView style="@style/Label" android:text="@string/settings_key" />
+            <EditText
+                android:id="@+id/key"
+                style="@style/Field"
+                android:hint="@string/settings_key_hint"
+                android:inputType="textPassword" />
+            <TextView android:id="@+id/keyState" style="@style/Note" />
+
+            <TextView style="@style/Label" android:text="@string/settings_search_key" />
+            <EditText
+                android:id="@+id/searchKey"
+                style="@style/Field"
+                android:hint="@string/settings_search_hint"
+                android:inputType="textPassword" />
+            <TextView android:id="@+id/searchKeyState" style="@style/Note" />
+        </LinearLayout>
+
+        <!-- What it knows about the viewer -->
+        <LinearLayout style="@style/Card">
+
+            <TextView style="@style/Section" android:text="@string/settings_memory" />
+            <EditText
+                android:id="@+id/memory"
+                style="@style/Field"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="top|start"
+                android:hint="@string/settings_memory_hint"
+                android:inputType="textMultiLine|textCapSentences"
+                android:minLines="3"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp"
+                android:singleLine="false" />
+            <TextView style="@style/Note" android:text="@string/settings_memory_note" />
+        </LinearLayout>
+
+        <!-- Voice -->
+        <LinearLayout style="@style/Card">
+
+            <TextView style="@style/Section" android:text="@string/settings_voice" />
+            <CheckBox
+                android:id="@+id/speak"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/field"
+                android:buttonTint="#FF4D6BFE"
+                android:paddingStart="12dp"
+                android:text="@string/settings_speak"
+                android:textColor="#FFF8FAFF"
+                android:textSize="17sp" />
+            <TextView
+                android:id="@+id/voicesLoading"
+                style="@style/Note"
+                android:layout_marginTop="10dp"
+                android:text="@string/settings_voice_loading" />
+            <RadioGroup
+                android:id="@+id/voices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+            <TextView style="@style/Note" android:text="@string/settings_voice_note" />
+        </LinearLayout>
+
+        <!-- Model and server -->
+        <LinearLayout style="@style/Card">
+
+            <TextView style="@style/Section" android:text="@string/settings_section_model" />
+            <TextView style="@style/Label" android:text="@string/settings_model" />
+            <EditText android:id="@+id/model" style="@style/Field" android:inputType="text" />
+            <TextView style="@style/Label" android:text="@string/settings_base_url" />
+            <EditText android:id="@+id/baseUrl" style="@style/Field" android:inputType="textUri" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

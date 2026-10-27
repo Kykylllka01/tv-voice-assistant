@@ -110,7 +110,10 @@ class MicOrbView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             canvas.restore()
         }
 
-        if (isShown) postInvalidateOnAnimation()
+        // Resting (idle, error) it only breathes slowly: 30 frames a second are plenty and spare the TV's CPU.
+        if (isShown) {
+            if (mode == Mode.IDLE || mode == Mode.ERROR) postInvalidateDelayed(33) else postInvalidateOnAnimation()
+        }
     }
 
     private fun now() = System.currentTimeMillis()

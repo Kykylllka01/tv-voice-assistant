@@ -34,6 +34,19 @@ class WeatherTest {
     }
 
     @Test
+    fun givesTheCardItsNumbers() {
+        val json = """{"current":{"temperature_2m":5.8,"weather_code":0},
+            "daily":{"time":["2026-10-31","2026-11-01"],"weather_code":[3,61],
+              "temperature_2m_max":[8.2,7.0],"temperature_2m_min":[3.1,2.4]}}"""
+        val forecast = Weather.parseForecast(moscow, json)
+        assertEquals(Forecast.Now(5.8, 0), forecast.now)
+        assertEquals(
+            listOf(Forecast.Day("2026-10-31", 3, 3.1, 8.2), Forecast.Day("2026-11-01", 61, 2.4, 7.0)),
+            forecast.days,
+        )
+    }
+
+    @Test
     fun namesUnknownCodes() {
         assertEquals("thunderstorm with hail", Weather.sky(99))
         assertEquals("weather code 42", Weather.sky(42))

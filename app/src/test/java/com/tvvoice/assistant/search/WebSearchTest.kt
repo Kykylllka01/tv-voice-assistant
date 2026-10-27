@@ -20,4 +20,14 @@ class WebSearchTest {
     fun saysWhenNothingWasFound() {
         assertEquals("No results.", WebSearch.forModel(WebSearch.parse("""{"results":[]}""")))
     }
+
+    @Test
+    fun onlyWebLinksBecomeSources() {
+        val json = """{"results":[
+            {"title":"a","url":"javascript:alert(1)","content":"x"},
+            {"title":"b","url":"intent://scan/#Intent;scheme=zxing;end","content":"x"},
+            {"title":"c","url":"file:///sdcard/x","content":"x"},
+            {"title":"d","url":"https://rbc.ru/news/1","content":"x"}]}"""
+        assertEquals(listOf("https://rbc.ru/news/1"), WebSearch.parse(json).map { it.url })
+    }
 }

@@ -68,7 +68,7 @@ class WebSearch(private val apiKey: String, private val endpoint: String = ENDPO
                 val code = c.responseCode
                 if (code !in 200..299) {
                     val detail = c.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty().take(200)
-                    Log.w(TAG, "search HTTP $code: $detail")
+                    Log.w(TAG, "search HTTP $code: ${detail.replace(apiKey, "***")}")
                     // Tavily itself answers a bad key in JSON; a bare HTML 403 comes from the gateway in front of it,
                     // which turns away keyed requests from some networks whatever the key, so that is not the key.
                     if (code == 401 || (code == 403 && detail.trimStart().startsWith("{"))) {
@@ -104,13 +104,22 @@ class WebSearch(private val apiKey: String, private val endpoint: String = ENDPO
             return (0 until results.length()).mapNotNull { i ->
                 val r = results.optJSONObject(i) ?: return@mapNotNull null
                 val url = r.optString("url").trim()
-                if (url.isEmpty()) return@mapNotNull null
+                // Only web pages: a link here becomes a QR code and opens in the browser.
+                if (!isWebLink(url)) return@mapNotNull null
                 Source(
                     r.optString("title").trim(), url, r.optString("content").trim().take(SNIPPET_CHARS),
                     // A missing date comes as JSON null, which optString turns into "null".
                     if (r.isNull("published_date")) "" else r.optString("published_date").trim(),
                 )
             }
+        }
+
+        /** http(s) with a host: nothing like javascript:, intent:, file: or content: reaches the browser or a QR code. */
+        fun isWebLink(url: String): Boolean = try {
+            val uri = URI(url)
+            (uri.scheme == "https" || uri.scheme == "http") && !uri.host.isNullOrEmpty()
+        } catch (e: Exception) {
+            false
         }
 
         /** The results as the model reads them in the tool message: numbered, title, link, passage. */

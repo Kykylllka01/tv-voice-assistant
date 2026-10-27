@@ -9,3 +9,7 @@ captures/
 tv-setup/
 # Outdated screenshot, superseded by docs/portfolio
 docs/settings.png
+# The release signing key and its passwords: never in the repository
+keystore.properties
+*.jks
+*.keystore

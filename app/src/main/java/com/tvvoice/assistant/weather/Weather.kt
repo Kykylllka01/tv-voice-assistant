@@ -14,6 +14,16 @@ import java.util.Locale
 /** A place the geocoder found: what the card shows and where the forecast is for. */
 data class Place(val name: String, val country: String, val latitude: Double, val longitude: Double)
 
+/** The weather as the card on screen draws it: now, then one entry a day; temperatures in degrees Celsius. */
+data class Forecast(val place: Place, val now: Now?, val days: List<Day>) {
+    data class Now(val temperature: Double, val code: Int)
+    /** [date] as Open-Meteo gives it, "2026-10-31", in the place's own calendar. */
+    data class Day(val date: String, val code: Int, val min: Double, val max: Double)
+}
+
+/** What a `weather` call returns: the card's numbers and the text the model answers from. */
+data class Report(val forecast: Forecast, val text: String)
+
 /** Why there is no forecast: the place was not found, or the service did not answer. */
 class WeatherException(message: String) : Exception(message)
 
@@ -26,8 +36,8 @@ class Weather(
     private val geocoder: String = GEOCODER,
     private val forecaster: String = FORECASTER,
 ) {
-    /** The weather in [place] now and for the next [days] days, as the model reads it. */
-    suspend fun forecast(place: String, days: Int): Pair<Place, String> = withContext(Dispatchers.IO) {
+    /** The weather in [place] now and for the next [days] days, for the card and for the model. */
+    suspend fun forecast(place: String, days: Int): Report = withContext(Dispatchers.IO) {
         val name = URLEncoder.encode(place.trim(), "UTF-8")
         val found = parsePlace(get("$geocoder?name=$name&count=1&language=ru&format=json"))
             ?: throw WeatherException("place not found: $place")
@@ -38,7 +48,7 @@ class Weather(
                 "precipitation_probability_max,wind_speed_10m_max&timezone=auto&wind_speed_unit=ms" +
                 "&forecast_days=${days.coerceIn(1, MAX_DAYS)}",
         )
-        found to forModel(found, json)
+        Report(parseForecast(found, json), forModel(found, json))
     }
 
     private fun get(url: String): String {
@@ -73,6 +83,25 @@ class Weather(
             }
         } catch (e: JSONException) {
             throw WeatherException("unreadable geocoder response")
+        }
+
+        /** The numbers the card draws. */
+        fun parseForecast(place: Place, json: String): Forecast = try {
+            val root = JSONObject(json)
+            val now = root.optJSONObject("current")?.let { Forecast.Now(it.getDouble("temperature_2m"), it.getInt("weather_code")) }
+            val daily = root.optJSONObject("daily")
+            val days = if (daily == null) emptyList() else {
+                val dates = daily.getJSONArray("time")
+                (0 until dates.length()).map { i ->
+                    Forecast.Day(
+                        dates.getString(i), daily.getJSONArray("weather_code").getInt(i),
+                        daily.getJSONArray("temperature_2m_min").getDouble(i), daily.getJSONArray("temperature_2m_max").getDouble(i),
+                    )
+                }
+            }
+            Forecast(place, now, days)
+        } catch (e: JSONException) {
+            throw WeatherException("unreadable forecast")
         }
 
         /** Now, then one line per day: what the model answers from, in plain words and units. */

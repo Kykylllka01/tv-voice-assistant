@@ -47,9 +47,20 @@ object Tools {
     const val FORGET = "forget"
 
     const val WEATHER = "weather"
+    const val OPEN_APP = "open_app"
+    const val YOUTUBE = "youtube_search"
+    const val VOLUME = "set_volume"
+    const val SET_REMINDER = "set_reminder"
+    const val CANCEL_REMINDER = "cancel_reminder"
 
-    /** Memory and weather always; web search only with a search key. */
-    fun definitions(search: Boolean): JSONArray = JSONArray().apply {
+    /** Calls that change something: kept in the dialogue, so the model sees that doing it takes a call. */
+    val ACTIONS = setOf(REMEMBER, FORGET, OPEN_APP, YOUTUBE, VOLUME, SET_REMINDER, CANCEL_REMINDER)
+
+    /**
+     * Weather, memory, reminders and TV control always; web search only with a search key. [apps] are the names
+     * of the installed apps, offered as the only values open_app takes.
+     */
+    fun definitions(search: Boolean, apps: Collection<String> = emptyList()): JSONArray = JSONArray().apply {
         if (search) put(function(WEB_SEARCH, "Search the internet. Use it for anything current or checkable: news, " +
             "prices and exchange rates, sports results, schedules, releases, people and events after your " +
             "knowledge cutoff, or any fact you are not sure about. Not for weather: use the weather tool.",
@@ -68,6 +79,31 @@ object Tools {
                 .put("days", JSONObject().put("type", "integer")
                     .put("description", "How many days from today to include, 1 to 7; 1 when only today or now.")),
             "place"))
+        put(function(OPEN_APP, "Open an app installed on this TV: YouTube, a streaming service, settings.",
+            JSONObject().put("name", string("The app's name exactly as listed.")
+                .apply { if (apps.isNotEmpty()) put("enum", JSONArray(apps.toList())) }),
+            "name"))
+        put(function(YOUTUBE, "Open YouTube on the TV with the results of a search, when the user wants to watch " +
+            "something on YouTube. It cannot start a particular video by itself.",
+            JSONObject().put("query", string("What to search for on YouTube.")),
+            "query"))
+        put(function(VOLUME, "Change the TV's volume.",
+            JSONObject()
+                .put("action", string("set to a level, up or down by some points, mute or unmute.")
+                    .put("enum", JSONArray().put("set").put("up").put("down").put("mute").put("unmute")))
+                .put("level", JSONObject().put("type", "integer").put("description",
+                    "For set: the level in percent, 0 to 100. For up or down: by how many points, 10 if not said.")),
+            "action"))
+        put(function(SET_REMINDER, "Set a reminder or a timer: at that time the TV shows it over whatever is on " +
+            "screen and reads it out. Give in_minutes for \"in 15 minutes\" or a timer, at for a clock time.",
+            JSONObject()
+                .put("text", string("What to remind of, short, in the user's language, e.g. \"Выключить духовку\"."))
+                .put("in_minutes", JSONObject().put("type", "integer").put("description", "Minutes from now."))
+                .put("at", string("A clock time, 24-hour HH:MM, the next time it comes.")),
+            "text"))
+        put(function(CANCEL_REMINDER, "Cancel the reminders whose text mentions the given words.",
+            JSONObject().put("text", string("A word or phrase from the reminder.")),
+            "text"))
         put(function(REMEMBER, "Save a lasting fact about the user that will matter in later conversations: " +
             "their name, city, family, preferences, favourite sources, teams or shows. Not one-off requests.",
             JSONObject().put("fact", string("One short statement in the third person, in the user's language, " +

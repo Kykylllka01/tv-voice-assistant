@@ -35,11 +35,17 @@ object SecureStore {
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(TAG_BITS, sealed, 0, IV_BYTES))
             String(cipher.doFinal(sealed, IV_BYTES, sealed.size - IV_BYTES), Charsets.UTF_8)
         } catch (e: Exception) {
+            android.util.Log.w("TvVoice", "a saved key cannot be opened: ${e.javaClass.simpleName}")
             null
         }
     }
 
-    private fun key(): SecretKey {
+    /** The Keystore lookup is slow on a TV's secure hardware: once per process. */
+    @Volatile private var cachedKey: SecretKey? = null
+
+    private fun key(): SecretKey = cachedKey ?: loadKey().also { cachedKey = it }
+
+    private fun loadKey(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")

@@ -53,7 +53,8 @@ class ToolsTest {
         val names = Tools.definitions(search = false).let { tools ->
             (0 until tools.length()).map { tools.getJSONObject(it).getJSONObject("function").getString("name") }
         }
-        assertEquals(listOf(Tools.WEATHER, Tools.REMEMBER, Tools.FORGET), names)
+        assertTrue(names.containsAll(listOf(Tools.WEATHER, Tools.REMEMBER, Tools.FORGET, Tools.OPEN_APP, Tools.SET_REMINDER)))
+        assertTrue(Tools.WEB_SEARCH !in names)
         assertEquals("Живёт в Москве", ToolCall("c", Tools.REMEMBER, "{\"fact\":\" Живёт в Москве \"}").fact)
     }
 

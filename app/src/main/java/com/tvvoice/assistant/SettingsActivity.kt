@@ -1,6 +1,7 @@
 package com.tvvoice.assistant
 
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.view.View
@@ -46,6 +47,7 @@ class SettingsActivity : Activity() {
     private lateinit var speak: CheckBox
     private lateinit var result: TextView
     private lateinit var voices: RadioGroup
+    private lateinit var voicesLoading: TextView
     private var tts: TextToSpeech? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -66,6 +68,7 @@ class SettingsActivity : Activity() {
         speak = findViewById(R.id.speak)
         result = findViewById(R.id.testResult)
         voices = findViewById(R.id.voices)
+        voicesLoading = findViewById(R.id.voicesLoading)
         tts = TextToSpeech(this) { status -> if (status == TextToSpeech.SUCCESS) runOnUiThread(::showVoices) }
 
         facts.setText(memory.facts.joinToString("\n"))
@@ -75,8 +78,7 @@ class SettingsActivity : Activity() {
         showKeyState()
 
         findViewById<Button>(R.id.save).setOnClickListener {
-            save()
-            Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show()
+            if (save()) Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.test).setOnClickListener {
             save()
@@ -85,18 +87,39 @@ class SettingsActivity : Activity() {
         (if (prefs.hasKey) findViewById<Button>(R.id.test) else key).requestFocus()
     }
 
-    private fun save() {
-        val typed = key.text.toString()
-        if (typed.isNotBlank()) prefs.apiKey = typed
-        key.text.clear()
-        val typedSearch = searchKey.text.toString()
-        if (typedSearch.isNotBlank()) prefs.searchKey = typedSearch
-        searchKey.text.clear()
+    /** False when something could not be saved; the reason is on screen. */
+    private fun save(): Boolean {
+        var ok = true
+        try {
+            val typed = key.text.toString()
+            if (typed.isNotBlank()) prefs.apiKey = typed
+            key.text.clear()
+            val typedSearch = searchKey.text.toString()
+            if (typedSearch.isNotBlank()) prefs.searchKey = typedSearch
+            searchKey.text.clear()
+        } catch (e: Exception) {
+            // The Keystore refused (rare, after a system update): say so instead of crashing.
+            showResult(getString(R.string.settings_key_not_saved))
+            ok = false
+        }
         memory.facts = facts.text.lines()
         prefs.model = model.text.toString()
-        prefs.baseUrl = baseUrl.text.toString()
+        // The key goes to this server: only an https address is taken.
+        val server = baseUrl.text.toString().trim()
+        if (server.isEmpty() || server.startsWith("https://")) prefs.baseUrl = server
+        else {
+            showResult(getString(R.string.settings_bad_server))
+            baseUrl.setText(prefs.baseUrl)
+            ok = false
+        }
         prefs.speak = speak.isChecked
         showKeyState()
+        return ok
+    }
+
+    private fun showResult(text: String) {
+        result.visibility = View.VISIBLE
+        result.text = text
     }
 
     private fun showKeyState() {
@@ -111,6 +134,7 @@ class SettingsActivity : Activity() {
      */
     private fun test() {
         testing?.cancel()
+        result.visibility = View.VISIBLE
         result.text = getString(R.string.thinking)
         val question = getString(R.string.test_question)
         val body = Conversation(AssistActivity.systemPrompt(this, false, memory.facts)).requestBody(prefs.model, question)
@@ -130,6 +154,8 @@ class SettingsActivity : Activity() {
                     ChatException.Kind.OFFLINE -> getString(R.string.error_offline)
                     ChatException.Kind.SERVER -> getString(R.string.error_server, e.message)
                 }
+            } catch (e: Exception) {
+                getString(R.string.error_server, e.message ?: e.javaClass.simpleName)
             }
             if (prefs.hasSearchKey) {
                 val searchLine = try {
@@ -152,6 +178,7 @@ class SettingsActivity : Activity() {
                 .map { it.name to it.isNetworkConnectionRequired },
         )
         voices.removeAllViews()
+        voicesLoading.visibility = View.GONE
         addVoice("", getString(R.string.settings_voice_default))
         names.forEachIndexed { i, name ->
             val online = if (name.endsWith("-network")) getString(R.string.settings_voice_online) else ""
@@ -168,6 +195,7 @@ class SettingsActivity : Activity() {
             setTextColor(0xFFFFFFFF.toInt())
             setBackgroundResource(R.drawable.field)
             setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), 0)
+            buttonTintList = ColorStateList.valueOf(ACCENT)
             isChecked = name == prefs.voice
             setOnClickListener { pick(name) }
         }
@@ -187,7 +215,12 @@ class SettingsActivity : Activity() {
 
     override fun onDestroy() {
         tts?.shutdown()
+        tts = null
         scope.cancel()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val ACCENT = 0xFF4D6BFE.toInt()
     }
 }
